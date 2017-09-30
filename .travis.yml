@@ -1,0 +1,31 @@
+sudo: false
+
+language: java
+
+os:
+  - linux
+
+addons:
+  apt:
+    packages:
+    - ant
+
+jdk:
+  - oraclejdk8
+
+script:
+  - export SRC=$PWD
+  - cd $HOME
+  - export TAG=1.6.12
+  - wget https://github.com/arduino/Arduino/archive/$TAG.zip
+  - unzip $TAG.zip
+  - rm $TAG.zip
+  - export arduino_dir=Arduino-$TAG
+  - pushd $arduino_dir/build
+  - echo "" | ant build
+  - pushd shared/tools
+  - mkdir -p ESP32FS
+  - rsync -a $SRC/ ESP32FS/
+  - pushd ESP32FS
+  - ./make.sh
+  - popd && popd && popd
