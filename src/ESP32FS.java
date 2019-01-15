@@ -286,9 +286,9 @@ public class ESP32FS implements Tool {
       String esptoolCmd = "esptool"+toolExtension;
       esptool = new File(platform.getFolder()+"/tools", esptoolCmd);
       if(!esptool.exists() || !esptool.isFile()){
-        esptool = new File(platform.getFolder()+"/tools/esptool", esptoolCmd);
+        esptool = new File(platform.getFolder()+"/tools/esptool_py", esptoolCmd);
         if(!esptool.exists()){
-          esptool = new File(PreferencesData.get("runtime.tools.esptool.path"), esptoolCmd);
+          esptool = new File(PreferencesData.get("runtime.tools.esptool_py.path"), esptoolCmd);
           if (!esptool.exists()) {
               System.err.println();
               editor.statusError("SPIFFS Error: esptool not found!");
