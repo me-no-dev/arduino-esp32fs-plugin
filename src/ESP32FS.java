@@ -269,6 +269,8 @@ public class ESP32FS implements Tool {
         }
       }
     }
+	System.out.println("mk" + typefs.toLowerCase() + " : " + tool.getAbsolutePath());
+	System.out.println();
 
     //make sure the serial port or IP is defined
     if (serialPort == null || serialPort.isEmpty()) {
@@ -286,6 +288,8 @@ public class ESP32FS implements Tool {
         editor.statusError(typefs + " Error: espota not found!");
         return;
       }
+	  System.out.println("espota : "+espota.getAbsolutePath());
+      System.out.println();	 
     } else {
       String esptoolCmd = "esptool"+toolExtension;
       esptool = new File(platform.getFolder()+"/tools", esptoolCmd);
@@ -300,8 +304,10 @@ public class ESP32FS implements Tool {
           }
         }
       }
+      System.out.println("esptool : "+esptool.getAbsolutePath());
+      System.out.println();	  
     }
-    
+	
     //load a list of all files
     int fileCount = 0;
     File dataFolder = new File(editor.getSketch().getFolder(), "data");
@@ -380,7 +386,7 @@ public class ESP32FS implements Tool {
 
   public void run() {
 	String sketchName = editor.getSketch().getName();
-    Object[] options = { "LITTLEFS", "SPIFFS",  };
+    Object[] options = { "LittleFS", "SPIFFS",  };
     int result = JOptionPane.showOptionDialog(editor,
                                               "What FS you want for " + sketchName +
                                               " data folder?",
