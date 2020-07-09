@@ -7,7 +7,7 @@ and uploads the image to ESP32 flash memory.
 ## Installation
 
 - Make sure you use one of the supported versions of Arduino IDE and have ESP32 core installed.
-- Download the tool archive from [releases page](https://github.com/me-no-dev/arduino-esp32fs-plugin/releases/latest).
+- Download the tool from [here](https://github.com/lorol/arduino-esp32fs-plugin/releases/download/1.0%2C1/esp32fs.zip)
 - In your Arduino sketchbook directory, create tools directory if it doesn't exist yet.
 - Unpack the tool into tools directory (the path will look like ```<home_dir>/Arduino/tools/ESP32FS/tool/esp32fs.jar```).
 - If not already installed, for LITTLEFS you need an additional [mklittlefs tool](https://github.com/earlephilhower/mklittlefs)  Download the [release](https://github.com/earlephilhower/mklittlefs/releases) and copy it to 
