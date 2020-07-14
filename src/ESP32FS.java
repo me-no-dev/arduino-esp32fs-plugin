@@ -165,8 +165,10 @@ public class ESP32FS implements Tool {
   }
 
   private void createAndUpload(){
-    long spiStart = 0, spiSize = 0, spiPage = 256, spiBlock = 4096;
+    long spiStart = 0, spiSize = 0, spiPage = 256, spiBlock = 4096, spiOffset = 0;
     String partitions = "";
+    
+    if (typefs == "FATFS") spiOffset = 4096;
     
     if(!PreferencesData.get("target_platform").contentEquals("esp32")){
       System.err.println();
@@ -192,10 +194,12 @@ public class ESP32FS implements Tool {
     String mkspiffsCmd;
     if(PreferencesData.get("runtime.os").contentEquals("windows"))
 		if (typefs == "LITTLEFS") mkspiffsCmd = "mklittlefs.exe";
-			else mkspiffsCmd = "mkspiffs.exe";
+        else if (typefs == "FATFS") mkspiffsCmd = "mkfatfs.exe";
+		else mkspiffsCmd = "mkspiffs.exe";
     else
         if (typefs == "LITTLEFS") mkspiffsCmd = "mklittlefs";
-			else mkspiffsCmd = "mkspiffs";
+        else if (typefs == "FATFS") mkspiffsCmd = "mkfatfs";
+		else mkspiffsCmd = "mkspiffs";
 
     String espotaCmd = "espota.py";
     if(PreferencesData.get("runtime.os").contentEquals("windows"))
@@ -234,7 +238,7 @@ public class ESP32FS implements Tool {
       BufferedReader partitionsReader = new BufferedReader(new FileReader(partitionsFile));
       String partitionsLine = "";
       while ((partitionsLine = partitionsReader.readLine()) != null) {
-        if(partitionsLine.contains("spiffs")) {
+        if(partitionsLine.contains("spiffs") || partitionsLine.contains("ffat")){ 
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
@@ -243,8 +247,8 @@ public class ESP32FS implements Tool {
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
           while(partitionsLine.startsWith(" ")) partitionsLine = partitionsLine.substring(1);
           String pSize = partitionsLine.substring(0, partitionsLine.indexOf(","));
-          spiStart = parseInt(pStart);
-          spiSize = parseInt(pSize);
+          spiStart = parseInt(pStart) + spiOffset;
+          spiSize = parseInt(pSize) - spiOffset;
         }
       }
       if(spiSize == 0){
@@ -295,18 +299,25 @@ public class ESP32FS implements Tool {
       esptool = new File(platform.getFolder()+"/tools", esptoolCmd);
       if(!esptool.exists() || !esptool.isFile()){
         esptool = new File(platform.getFolder()+"/tools/esptool_py", esptoolCmd);
-        if(!esptool.exists()){
-          esptool = new File(PreferencesData.get("runtime.tools.esptool_py.path"), esptoolCmd);
-          if (!esptool.exists()) {
-              System.err.println();
-              editor.statusError(typefs + " Error: esptool not found!");
-              return;
-          }
+        if(!esptool.exists() || !esptool.isFile()){
+            esptool = new File(platform.getFolder()+"/tools/esptool", esptoolCmd);
+            if(!esptool.exists() || !esptool.isFile()){
+              esptool = new File(PreferencesData.get("runtime.tools.esptool_py.path"), esptoolCmd);
+              if(!esptool.exists() || !esptool.isFile()){
+                esptool = new File(PreferencesData.get("runtime.tools.esptool.path"), esptoolCmd);              
+                if(!esptool.exists() || !esptool.isFile()){
+                  System.err.println();
+                  editor.statusError("SPIFFS Error: esptool not found!");
+                  return;
+                }
+              }
+            }
         }
       }
-      System.out.println("esptool : "+esptool.getAbsolutePath());
-      System.out.println();	  
     }
+    System.out.println("esptool : "+esptool.getAbsolutePath());
+    System.out.println();	  
+   
 	
     //load a list of all files
     int fileCount = 0;
@@ -335,23 +346,33 @@ public class ESP32FS implements Tool {
 
     if(fileCount == 0 && JOptionPane.showOptionDialog(editor, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]) != JOptionPane.YES_OPTION){
       System.err.println();
-      editor.statusError(typefs + " Warning: mkspiffs canceled!");
+      editor.statusError(typefs + " Warning: mktool canceled!");
       return;
     }
 
     editor.statusNotice(typefs + " Creating Image...");
     System.out.println("[" + typefs + "] data   : "+dataPath);
+    System.out.println("[" + typefs + "] offset : "+spiOffset);
     System.out.println("[" + typefs + "] start  : "+spiStart);
     System.out.println("[" + typefs + "] size   : "+(spiSize/1024));
     System.out.println("[" + typefs + "] page   : "+spiPage);
     System.out.println("[" + typefs + "] block  : "+spiBlock);
 
     try {
-      if(listenOnProcess(new String[]{toolPath, "-c", dataPath, "-p", spiPage+"", "-b", spiBlock+"", "-s", spiSize+"", imagePath}) != 0){
-        System.err.println();
-        editor.statusError(typefs + " Create Failed!");
-        return;
+      if (typefs == "FATFS") {
+        if(listenOnProcess(new String[]{toolPath, "-c", dataPath, "-s", spiSize+"", imagePath}) != 0){  
+           System.err.println();
+           editor.statusError(typefs + " Create Failed!");
+           return; 
+        }
+      } else {   
+         if(listenOnProcess(new String[]{toolPath, "-c", dataPath, "-p", spiPage+"", "-b", spiBlock+"", "-s", spiSize+"", imagePath}) != 0){
+           System.err.println();
+           editor.statusError(typefs + " Create Failed!");
+           return;
+         }
       }
+      
     } catch (Exception e){
       editor.statusError(e);
       editor.statusError(typefs + " Create Failed!");
@@ -386,21 +407,21 @@ public class ESP32FS implements Tool {
 
   public void run() {
 	String sketchName = editor.getSketch().getName();
-    Object[] options = { "LittleFS", "SPIFFS",  };
-    int result = JOptionPane.showOptionDialog(editor,
+    Object[] options = { "SPIFFS", "LITTLEFS", "FATFS" };
+    typefs = (String)JOptionPane.showInputDialog(editor,
                                               "What FS you want for " + sketchName +
                                               " data folder?",
                                               "Select",
-                                              JOptionPane.YES_NO_OPTION,
-                                              JOptionPane.QUESTION_MESSAGE,
+                                              JOptionPane.PLAIN_MESSAGE,
                                               null,
                                               options,
-                                              options[1]);
-    if (result == JOptionPane.YES_OPTION) {
-		typefs = "LITTLEFS";
-	} else {
-		typefs = "SPIFFS";
-    } 
-	createAndUpload();  
+                                              "SPIFFS");
+    if ((typefs != null) && (typefs.length() > 0)) {
+        createAndUpload();    
+    } else {
+        System.out.println("Tool Exit.");
+       return; 
+    }
+  
   }
 }
