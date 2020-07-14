@@ -2,7 +2,7 @@
 
 /*
   Tool to put the contents of the sketch's "data" subfolder
-  into an SPIFFS partition image and upload it to an ESP32 MCU
+  into an SPIFFS, LittleFS or FatFS partition image and upload it to an ESP32 MCU
 
   Copyright (c) 2015 Hristo Gochkov (hristo at espressif dot com)
 
@@ -66,7 +66,7 @@ public class ESP32FS implements Tool {
     return "ESP32 Sketch Data Upload";
   }
   
-  private String typefs = "SPIFFS";
+  private String typefs = "";
 
   private int listenOnProcess(String[] arguments){
       try {
@@ -168,7 +168,7 @@ public class ESP32FS implements Tool {
     long spiStart = 0, spiSize = 0, spiPage = 256, spiBlock = 4096, spiOffset = 0;
     String partitions = "";
     
-    if (typefs == "FATFS") spiOffset = 4096;
+    if (typefs == "FatFS") spiOffset = 4096;
     
     if(!PreferencesData.get("target_platform").contentEquals("esp32")){
       System.err.println();
@@ -193,12 +193,12 @@ public class ESP32FS implements Tool {
     
     String mkspiffsCmd;
     if(PreferencesData.get("runtime.os").contentEquals("windows"))
-		if (typefs == "LITTLEFS") mkspiffsCmd = "mklittlefs.exe";
-        else if (typefs == "FATFS") mkspiffsCmd = "mkfatfs.exe";
+		if (typefs == "LittleFS") mkspiffsCmd = "mklittlefs.exe";
+        else if (typefs == "FatFS") mkspiffsCmd = "mkfatfs.exe";
 		else mkspiffsCmd = "mkspiffs.exe";
     else
-        if (typefs == "LITTLEFS") mkspiffsCmd = "mklittlefs";
-        else if (typefs == "FATFS") mkspiffsCmd = "mkfatfs";
+        if (typefs == "LittleFS") mkspiffsCmd = "mklittlefs";
+        else if (typefs == "FatFS") mkspiffsCmd = "mkfatfs";
 		else mkspiffsCmd = "mkspiffs";
 
     String espotaCmd = "espota.py";
@@ -238,7 +238,7 @@ public class ESP32FS implements Tool {
       BufferedReader partitionsReader = new BufferedReader(new FileReader(partitionsFile));
       String partitionsLine = "";
       while ((partitionsLine = partitionsReader.readLine()) != null) {
-        if(partitionsLine.contains("spiffs") || partitionsLine.contains("ffat")){ 
+        if( ((typefs != "FatFS") && partitionsLine.contains("spiffs")) || ((typefs == "FatFS") && partitionsLine.contains("ffat"))){ 
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
@@ -307,7 +307,7 @@ public class ESP32FS implements Tool {
                 esptool = new File(PreferencesData.get("runtime.tools.esptool.path"), esptoolCmd);              
                 if(!esptool.exists() || !esptool.isFile()){
                   System.err.println();
-                  editor.statusError("SPIFFS Error: esptool not found!");
+                  editor.statusError("Error: esptool not found!");
                   return;
                 }
               }
@@ -355,11 +355,13 @@ public class ESP32FS implements Tool {
     System.out.println("[" + typefs + "] offset : "+spiOffset);
     System.out.println("[" + typefs + "] start  : "+spiStart);
     System.out.println("[" + typefs + "] size   : "+(spiSize/1024));
-    System.out.println("[" + typefs + "] page   : "+spiPage);
-    System.out.println("[" + typefs + "] block  : "+spiBlock);
+    if (typefs != "FatFS") {
+        System.out.println("[" + typefs + "] page   : "+spiPage);
+        System.out.println("[" + typefs + "] block  : "+spiBlock);
+    }
 
     try {
-      if (typefs == "FATFS") {
+      if (typefs == "FatFS") {
         if(listenOnProcess(new String[]{toolPath, "-c", dataPath, "-s", spiSize+"", imagePath}) != 0){  
            System.err.println();
            editor.statusError(typefs + " Create Failed!");
@@ -407,11 +409,11 @@ public class ESP32FS implements Tool {
 
   public void run() {
 	String sketchName = editor.getSketch().getName();
-    Object[] options = { "SPIFFS", "LITTLEFS", "FATFS" };
+    Object[] options = { "SPIFFS", "LittleFS", "FatFS" };
     typefs = (String)JOptionPane.showInputDialog(editor,
-                                              "What FS you want for " + sketchName +
-                                              " data folder?",
-                                              "Select",
+                                              "Select FS for " + sketchName +
+                                              " /data folder",
+                                              "Filesystem",
                                               JOptionPane.PLAIN_MESSAGE,
                                               null,
                                               options,
