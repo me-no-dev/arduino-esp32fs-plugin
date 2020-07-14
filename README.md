@@ -30,7 +30,7 @@ if (!FFat.begin(0, "", 1)) die("Fat FS mount failed. Not enough RAM?");
 - For LITTLEFS, you need an additional [mklittlefs tool](https://github.com/earlephilhower/mklittlefs)  Download the [release](https://github.com/earlephilhower/mklittlefs/releases) 
 - For FatFS, you need additional binary files for Windows and Linux (thanks @lbernstone for compiling) or take it from the author [here - mkfatfs tool](https://github.com/labplus-cn/mkfatfs/releases/tag/v1.0)  Thanks to [labplus-cn](https://github.com/labplus-cn/mkfatfs)
 - Copy **mklittlefs[.exe]** and **mkfatfs[.exe]** to **/tools** folder of esp32 platform where **espota** and **esptool** (.py or.exe) tools are located
-- Alternatively see [here](https://github.com/lorol/arduino-esp32fs-plugin/releases/download/2.0/) , there are copy of the binaries. You can also use **package_esp32_index.template.json** and run get.py instead
+- Alternatively see [here](https://github.com/lorol/arduino-esp32fs-plugin/releases/tag/2.0) , there are copy of the binaries. You can also use **package_esp32_index.template.json** and run get.py instead
 - Restart Arduino IDE. 
 
 
