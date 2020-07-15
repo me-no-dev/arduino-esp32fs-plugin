@@ -34,7 +34,7 @@ if (!FFat.begin(0, "", 1)) die("Fat FS mount failed. Not enough RAM?");
 - In your Arduino sketchbook directory, create tools directory if it doesn't exist yet.
 - Unpack the tool into tools directory (the path will look like ```<home_dir>/Arduino/tools/ESP32FS/tool/esp32fs.jar```).
 - For **LittleFS**, you need an additional [mklittlefs tool](https://github.com/earlephilhower/mklittlefs)  Download the [release](https://github.com/earlephilhower/mklittlefs/releases) or see below
-- For **FatFS**, you need additional binary files for Windows or Linux (thanks @lbernstone for compiling) or take them from the author [here - mkfatfs tool](https://github.com/labplus-cn/mkfatfs/releases/tag/v1.0)  Thanks to [labplus-cn](https://github.com/labplus-cn/mkfatfs)
+- For **FatFS**, you need additional binary files for Windows or Linux, thanks [@lbernstone](https://github.com/lbernstone) for compiling - or take them from the author [here - mkfatfs tool](https://github.com/labplus-cn/mkfatfs/releases/tag/v1.0) , thanks to [labplus-cn](https://github.com/labplus-cn/mkfatfs)
 - Copy **mklittlefs[.exe]** and **mkfatfs[.exe]** to **/tools** folder of esp32 platform where **espota** and **esptool** (.py or.exe) tools are located
 - Alternatively see at [latest release](https://github.com/lorol/arduino-esp32fs-plugin/releases) for copies of archived binaries in question. 
 - You can also use provided **package_esp32_index.template.json** to run **get.py** with it and download the missing binary files
@@ -52,21 +52,33 @@ if (!FFat.begin(0, "", 1)) die("Fat FS mount failed. Not enough RAM?");
 - Clicking OK should start uploading the files into ESP32 flash file system.
 
   When done, IDE status bar will display the status of Image Uploaded message. Might take a few minutes for large file system sizes.
+  
+## Screenshot
+
+![Screenshot](tool.png)
 
 ## Quick build on Win:
 
 - Install Java JDK 
 - Find the path of javac.exe and jar.exe
-- Edit make_win.bat accordingly
+- Edit **make_win.bat** accordingly
 - Copy files **arduino-core.jar , commons-codec-1.7.jar , pde.jar**  from your Arduino IDE installation to the folder where is located **make_win.bat**
 - Run **make_win.bat**
-- Find the **build jar** in /bin directory 
+- Find the **jar** file in /bin directory 
 
-## Credits and license (of the original tool)
+## Credits and license
+
+### The Original Arduino ESP32 filesystem uploader
 
 - Copyright (c) 2015 Hristo Gochkov (hristo at espressif dot com)
 - Licensed under GPL v2 ([text](LICENSE))
 - Maintained by Hristo Gochkov (hristo at espressif dot com)
+
+### Other people, sources and binary files
+
+- https://github.com/earlephilhower
+- https://github.com/labplus-cn/mkfatfs
+- https://github.com/lbernstone
 
 ## Issues and suggestions
 
