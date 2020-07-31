@@ -409,7 +409,7 @@ public class ESP32FS implements Tool {
 
   public void run() {
 	String sketchName = editor.getSketch().getName();
-    Object[] options = { "SPIFFS", "LittleFS", "FatFS" };
+    Object[] options = { "LittleFS", "SPIFFS", "FatFS" };
     typefs = (String)JOptionPane.showInputDialog(editor,
                                               "Select FS for " + sketchName +
                                               " /data folder",
@@ -417,7 +417,7 @@ public class ESP32FS implements Tool {
                                               JOptionPane.PLAIN_MESSAGE,
                                               null,
                                               options,
-                                              "SPIFFS");
+                                              "LittleFS");
     if ((typefs != null) && (typefs.length() > 0)) {
         createAndUpload();    
     } else {
