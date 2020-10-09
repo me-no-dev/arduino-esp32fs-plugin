@@ -407,9 +407,98 @@ public class ESP32FS implements Tool {
     }
   }
 
+  
+  private void eraseFlash(){
+    
+    if(!PreferencesData.get("target_platform").contentEquals("esp32")){
+      System.err.println();
+      editor.statusError(typefs + " Not Supported on "+PreferencesData.get("target_platform"));
+      return;
+    }
+
+    TargetPlatform platform = BaseNoGui.getTargetPlatform();
+
+    String toolExtension = ".py";
+    if(PreferencesData.get("runtime.os").contentEquals("windows")) {
+      toolExtension = ".exe";
+    } else if(PreferencesData.get("runtime.os").contentEquals("macosx")) {
+      toolExtension = "";
+    }
+
+    String pythonCmd;
+    if(PreferencesData.get("runtime.os").contentEquals("windows"))
+        pythonCmd = "python.exe";
+    else
+        pythonCmd = "python";
+    
+    Boolean isNetwork = false;
+
+    File esptool = new File(platform.getFolder()+"/tools");
+    String serialPort = PreferencesData.get("serial.port");
+
+    //make sure the serial port or IP is defined
+    if (serialPort == null || serialPort.isEmpty()) {
+      System.err.println();
+      editor.statusError(typefs + " Error: serial port not defined!");
+      return;
+    }
+
+    //find port
+    if(serialPort.split("\\.").length == 4){
+      isNetwork = true;
+    } else {
+      String esptoolCmd = "esptool"+toolExtension;
+      esptool = new File(platform.getFolder()+"/tools", esptoolCmd);
+      if(!esptool.exists() || !esptool.isFile()){
+        esptool = new File(platform.getFolder()+"/tools/esptool_py", esptoolCmd);
+        if(!esptool.exists() || !esptool.isFile()){
+            esptool = new File(platform.getFolder()+"/tools/esptool", esptoolCmd);
+            if(!esptool.exists() || !esptool.isFile()){
+              esptool = new File(PreferencesData.get("runtime.tools.esptool_py.path"), esptoolCmd);
+              if(!esptool.exists() || !esptool.isFile()){
+                esptool = new File(PreferencesData.get("runtime.tools.esptool.path"), esptoolCmd);              
+                if(!esptool.exists() || !esptool.isFile()){
+                  System.err.println();
+                  editor.statusError("Error: esptool not found!");
+                  return;
+                }
+              }
+            }
+        }
+      }
+    }
+    System.out.println("esptool : "+esptool.getAbsolutePath());
+    System.out.println();	  
+
+    Object[] options = { "Yes", "No" };
+    String title = "Erase All Flash";
+    String message = "Are you sure?";
+
+    if(JOptionPane.showOptionDialog(editor, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]) != JOptionPane.YES_OPTION){
+      System.err.println();
+      editor.statusError("Warning: Erase All Flash canceled!");
+      return;
+    }
+
+    editor.statusNotice("Erasing all Flash started...");
+    System.out.println("Erasing all Flash started...");
+
+    if(isNetwork){
+      System.out.println("Cannot be done through OTA, IP     : "+serialPort);
+      System.out.println();
+    } else {
+      System.out.println("Port: "+serialPort);
+      System.out.println();
+      if(esptool.getAbsolutePath().endsWith(".py"))
+        sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", "esp32", "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
+      else
+        sysExec(new String[]{esptool.getAbsolutePath(), "--chip", "esp32", "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
+    }
+  }
+
   public void run() {
 	String sketchName = editor.getSketch().getName();
-    Object[] options = { "LittleFS", "SPIFFS", "FatFS" };
+    Object[] options = { "LittleFS", "SPIFFS", "FatFS", "!Erase Flash!" };
     typefs = (String)JOptionPane.showInputDialog(editor,
                                               "Select FS for " + sketchName +
                                               " /data folder",
@@ -419,7 +508,11 @@ public class ESP32FS implements Tool {
                                               options,
                                               "LittleFS");
     if ((typefs != null) && (typefs.length() > 0)) {
-        createAndUpload();    
+        if (typefs == "!Erase Flash!") {
+            eraseFlash();
+        } else {
+            createAndUpload();
+        }        
     } else {
         System.out.println("Tool Exit.");
        return; 

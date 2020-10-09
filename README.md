@@ -1,7 +1,8 @@
 # Arduino ESP32 filesystem uploader 
 
 - Arduino plugin which packs sketch data folder into SPIFFS, LittleFS or FatFS filesystem image,
-and uploads the image to ESP32 flash memory.
+and uploads the image to ESP32 flash memory. 
+- Added a choice to "Erase all flash"
 - You can have only one of three filesystems on same Arduino project.
 
 ## Notes for SPIFFS
