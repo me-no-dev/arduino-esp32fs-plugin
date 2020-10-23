@@ -491,9 +491,9 @@ public class ESP32FS implements Tool {
       System.out.println("Port: "+serialPort);
       System.out.println();
       if(esptool.getAbsolutePath().endsWith(".py"))
-        sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", getChip(), "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
+        sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", "esp32", "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
       else
-        sysExec(new String[]{esptool.getAbsolutePath(), "--chip", getChip(), "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
+        sysExec(new String[]{esptool.getAbsolutePath(), "--chip", "esp32", "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
     }
   }
 
