@@ -2,7 +2,7 @@
 
 /*
   Tool to put the contents of the sketch's "data" subfolder
-  into an SPIFFS partition image and upload it to an ESP32 MCU
+  into an SPIFFS, LittleFS or FatFS partition image and upload it to an ESP32 MCU
 
   Copyright (c) 2015 Hristo Gochkov (hristo at espressif dot com)
 
@@ -65,6 +65,8 @@ public class ESP32FS implements Tool {
   public String getMenuTitle() {
     return "ESP32 Sketch Data Upload";
   }
+  
+  private String typefs = "";
 
   private int listenOnProcess(String[] arguments){
       try {
@@ -99,12 +101,12 @@ public class ESP32FS implements Tool {
       public void run() {
         try {
           if(listenOnProcess(arguments) != 0){
-            editor.statusError("SPIFFS Upload failed!");
+            editor.statusError(typefs + " Upload failed!");
           } else {
-            editor.statusNotice("SPIFFS Image Uploaded");
+            editor.statusNotice(typefs + " Image Uploaded");
           }
         } catch (Exception e){
-          editor.statusError("SPIFFS Upload failed!");
+          editor.statusError(typefs + " Upload failed!");
         }
       }
     };
@@ -163,12 +165,14 @@ public class ESP32FS implements Tool {
   }
 
   private void createAndUpload(){
-    long spiStart = 0, spiSize = 0, spiPage = 256, spiBlock = 4096;
+    long spiStart = 0, spiSize = 0, spiPage = 256, spiBlock = 4096, spiOffset = 0;
     String partitions = "";
     
+    if (typefs == "FatFS") spiOffset = 4096;
+
     if(!PreferencesData.get("target_platform").contentEquals("esp32")){
       System.err.println();
-      editor.statusError("SPIFFS Not Supported on "+PreferencesData.get("target_platform"));
+      editor.statusError(typefs + " Not Supported on "+PreferencesData.get("target_platform"));
       return;
     }
 
@@ -189,9 +193,13 @@ public class ESP32FS implements Tool {
     
     String mkspiffsCmd;
     if(PreferencesData.get("runtime.os").contentEquals("windows"))
-        mkspiffsCmd = "mkspiffs.exe";
+		if (typefs == "LittleFS") mkspiffsCmd = "mklittlefs.exe";
+        else if (typefs == "FatFS") mkspiffsCmd = "mkfatfs.exe";
+		else mkspiffsCmd = "mkspiffs.exe";
     else
-        mkspiffsCmd = "mkspiffs";
+        if (typefs == "LittleFS") mkspiffsCmd = "mklittlefs";
+        else if (typefs == "FatFS") mkspiffsCmd = "mkfatfs";
+		else mkspiffsCmd = "mkspiffs";
 
     String espotaCmd = "espota.py";
     if(PreferencesData.get("runtime.os").contentEquals("windows"))
@@ -222,7 +230,7 @@ public class ESP32FS implements Tool {
     File partitionsFile = new File(platform.getFolder() + "/tools/partitions", partitions + ".csv");
     if (!partitionsFile.exists() || !partitionsFile.isFile()) {
       System.err.println();
-      editor.statusError("SPIFFS Error: partitions file " + partitions + ".csv not found!");
+      editor.statusError(typefs + " Error: partitions file " + partitions + ".csv not found!");
       return;
     }
 
@@ -230,7 +238,7 @@ public class ESP32FS implements Tool {
       BufferedReader partitionsReader = new BufferedReader(new FileReader(partitionsFile));
       String partitionsLine = "";
       while ((partitionsLine = partitionsReader.readLine()) != null) {
-        if(partitionsLine.contains("spiffs")) {
+        if( ((typefs != "FatFS") && partitionsLine.contains("spiffs")) || ((typefs == "FatFS") && partitionsLine.contains("ffat"))){ 
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
@@ -239,13 +247,13 @@ public class ESP32FS implements Tool {
           partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
           while(partitionsLine.startsWith(" ")) partitionsLine = partitionsLine.substring(1);
           String pSize = partitionsLine.substring(0, partitionsLine.indexOf(","));
-          spiStart = parseInt(pStart);
-          spiSize = parseInt(pSize);
+          spiStart = parseInt(pStart) + spiOffset;
+          spiSize = parseInt(pSize) - spiOffset;
         }
       }
       if(spiSize == 0){
         System.err.println();
-        editor.statusError("SPIFFS Error: partition size could not be found!");
+        editor.statusError(typefs + " Error: partition size could not be found!");
         return;
       }
     } catch(Exception e){
@@ -255,21 +263,23 @@ public class ESP32FS implements Tool {
 
     File tool = new File(platform.getFolder() + "/tools", mkspiffsCmd);
     if (!tool.exists() || !tool.isFile()) {
-      tool = new File(platform.getFolder() + "/tools/mkspiffs", mkspiffsCmd);
+      tool = new File(platform.getFolder() + "/tools/mk" + typefs.toLowerCase(), mkspiffsCmd);
       if (!tool.exists()) {
-        tool = new File(PreferencesData.get("runtime.tools.mkspiffs.path"), mkspiffsCmd);
+        tool = new File(PreferencesData.get("runtime.tools.mk" + typefs.toLowerCase() + ".path"), mkspiffsCmd);
         if (!tool.exists()) {
             System.err.println();
-            editor.statusError("SPIFFS Error: mkspiffs not found!");
+            editor.statusError(typefs + " Error: mk" + typefs.toLowerCase() + "not found!");
             return;
         }
       }
     }
+	System.out.println("mk" + typefs.toLowerCase() + " : " + tool.getAbsolutePath());
+	System.out.println();
 
     //make sure the serial port or IP is defined
     if (serialPort == null || serialPort.isEmpty()) {
       System.err.println();
-      editor.statusError("SPIFFS Error: serial port not defined!");
+      editor.statusError(typefs + " Error: serial port not defined!");
       return;
     }
 
@@ -279,25 +289,36 @@ public class ESP32FS implements Tool {
       espota = new File(platform.getFolder()+"/tools", espotaCmd);
       if(!espota.exists() || !espota.isFile()){
         System.err.println();
-        editor.statusError("SPIFFS Error: espota not found!");
+        editor.statusError(typefs + " Error: espota not found!");
         return;
       }
+	  System.out.println("espota : "+espota.getAbsolutePath());
+      System.out.println();	 
     } else {
       String esptoolCmd = "esptool"+toolExtension;
       esptool = new File(platform.getFolder()+"/tools", esptoolCmd);
       if(!esptool.exists() || !esptool.isFile()){
         esptool = new File(platform.getFolder()+"/tools/esptool_py", esptoolCmd);
-        if(!esptool.exists()){
-          esptool = new File(PreferencesData.get("runtime.tools.esptool_py.path"), esptoolCmd);
-          if (!esptool.exists()) {
-              System.err.println();
-              editor.statusError("SPIFFS Error: esptool not found!");
-              return;
-          }
+        if(!esptool.exists() || !esptool.isFile()){
+            esptool = new File(platform.getFolder()+"/tools/esptool", esptoolCmd);
+            if(!esptool.exists() || !esptool.isFile()){
+              esptool = new File(PreferencesData.get("runtime.tools.esptool_py.path"), esptoolCmd);
+              if(!esptool.exists() || !esptool.isFile()){
+                esptool = new File(PreferencesData.get("runtime.tools.esptool.path"), esptoolCmd);              
+                if(!esptool.exists() || !esptool.isFile()){
+                  System.err.println();
+                  editor.statusError("Error: esptool not found!");
+                  return;
+                }
+              }
+            }
         }
       }
     }
-    
+    System.out.println("esptool : "+esptool.getAbsolutePath());
+    System.out.println();	  
+   
+	
     //load a list of all files
     int fileCount = 0;
     File dataFolder = new File(editor.getSketch().getFolder(), "data");
@@ -316,43 +337,55 @@ public class ESP32FS implements Tool {
     String dataPath = dataFolder.getAbsolutePath();
     String toolPath = tool.getAbsolutePath();
     String sketchName = editor.getSketch().getName();
-    String imagePath = getBuildFolderPath(editor.getSketch()) + "/" + sketchName + ".spiffs.bin";
+    String imagePath = getBuildFolderPath(editor.getSketch()) + "/" + sketchName + "." + typefs.toLowerCase() + ".bin";
     String uploadSpeed = BaseNoGui.getBoardPreferences().get("upload.speed");
 
     Object[] options = { "Yes", "No" };
-    String title = "SPIFFS Create";
-    String message = "No files have been found in your data folder!\nAre you sure you want to create an empty SPIFFS image?";
+    String title = typefs + " Create";
+    String message = "No files have been found in your data folder!\nAre you sure you want to create an empty " + typefs + " image?";
 
     if(fileCount == 0 && JOptionPane.showOptionDialog(editor, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]) != JOptionPane.YES_OPTION){
       System.err.println();
-      editor.statusError("SPIFFS Warning: mkspiffs canceled!");
+      editor.statusError(typefs + " Warning: mktool canceled!");
       return;
     }
 
-    editor.statusNotice("SPIFFS Creating Image...");
-    System.out.println("[SPIFFS] data   : "+dataPath);
-    System.out.println("[SPIFFS] start  : "+spiStart);
-    System.out.println("[SPIFFS] size   : "+(spiSize/1024));
-    System.out.println("[SPIFFS] page   : "+spiPage);
-    System.out.println("[SPIFFS] block  : "+spiBlock);
+    editor.statusNotice(typefs + " Creating Image...");
+    System.out.println("[" + typefs + "] data   : "+dataPath);
+    System.out.println("[" + typefs + "] offset : "+spiOffset);
+    System.out.println("[" + typefs + "] start  : "+spiStart);
+    System.out.println("[" + typefs + "] size   : "+(spiSize/1024));
+    if (typefs != "FatFS") {
+        System.out.println("[" + typefs + "] page   : "+spiPage);
+        System.out.println("[" + typefs + "] block  : "+spiBlock);
+    }
 
     try {
-      if(listenOnProcess(new String[]{toolPath, "-c", dataPath, "-p", spiPage+"", "-b", spiBlock+"", "-s", spiSize+"", imagePath}) != 0){
-        System.err.println();
-        editor.statusError("SPIFFS Create Failed!");
-        return;
+      if (typefs == "FatFS") {
+        if(listenOnProcess(new String[]{toolPath, "-c", dataPath, "-s", spiSize+"", imagePath}) != 0){  
+           System.err.println();
+           editor.statusError(typefs + " Create Failed!");
+           return; 
+        }
+      } else {   
+         if(listenOnProcess(new String[]{toolPath, "-c", dataPath, "-p", spiPage+"", "-b", spiBlock+"", "-s", spiSize+"", imagePath}) != 0){
+           System.err.println();
+           editor.statusError(typefs + " Create Failed!");
+           return;
+         }
       }
+      
     } catch (Exception e){
       editor.statusError(e);
-      editor.statusError("SPIFFS Create Failed!");
+      editor.statusError(typefs + " Create Failed!");
       return;
     }
 
-    editor.statusNotice("SPIFFS Uploading Image...");
-    System.out.println("[SPIFFS] upload : "+imagePath);
+    editor.statusNotice(typefs + " Uploading Image...");
+    System.out.println("[" + typefs + "] upload : "+imagePath);
 
     if(isNetwork){
-      System.out.println("[SPIFFS] IP     : "+serialPort);
+      System.out.println("[" + typefs + "] IP     : "+serialPort);
       System.out.println();
       if(espota.getAbsolutePath().endsWith(".py"))
         sysExec(new String[]{pythonCmd, espota.getAbsolutePath(), "-i", serialPort, "-p", "3232", "-s", "-f", imagePath});
@@ -361,20 +394,143 @@ public class ESP32FS implements Tool {
     } else {
       String flashMode = BaseNoGui.getBoardPreferences().get("build.flash_mode");
       String flashFreq = BaseNoGui.getBoardPreferences().get("build.flash_freq");
-      System.out.println("[SPIFFS] address: "+spiStart);
-      System.out.println("[SPIFFS] port   : "+serialPort);
-      System.out.println("[SPIFFS] speed  : "+uploadSpeed);
-      System.out.println("[SPIFFS] mode   : "+flashMode);
-      System.out.println("[SPIFFS] freq   : "+flashFreq);
+      System.out.println("[" + typefs + "] address: "+spiStart);
+      System.out.println("[" + typefs + "] port   : "+serialPort);
+      System.out.println("[" + typefs + "] speed  : "+uploadSpeed);
+      System.out.println("[" + typefs + "] mode   : "+flashMode);
+      System.out.println("[" + typefs + "] freq   : "+flashFreq);
+      System.out.println(); 
+
+      if(esptool.getAbsolutePath().endsWith(".py"))
+        sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", getChip(), "--baud", uploadSpeed, "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", flashMode, "--flash_freq", flashFreq, "--flash_size", "detect", ""+spiStart, imagePath});
+      else
+        sysExec(new String[]{esptool.getAbsolutePath(), "--chip", getChip(), "--baud", uploadSpeed, "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", flashMode, "--flash_freq", flashFreq, "--flash_size", "detect", ""+spiStart, imagePath});
+    }
+  }
+
+  
+  private void eraseFlash(){
+    
+    if(!PreferencesData.get("target_platform").contentEquals("esp32")){
+      System.err.println();
+      editor.statusError(typefs + " Not Supported on "+PreferencesData.get("target_platform"));
+      return;
+    }
+
+    TargetPlatform platform = BaseNoGui.getTargetPlatform();
+
+    String toolExtension = ".py";
+    if(PreferencesData.get("runtime.os").contentEquals("windows")) {
+      toolExtension = ".exe";
+    } else if(PreferencesData.get("runtime.os").contentEquals("macosx")) {
+      toolExtension = "";
+    }
+
+    String pythonCmd;
+    if(PreferencesData.get("runtime.os").contentEquals("windows"))
+        pythonCmd = "python.exe";
+    else
+        pythonCmd = "python";
+    
+    Boolean isNetwork = false;
+
+    File esptool = new File(platform.getFolder()+"/tools");
+    String serialPort = PreferencesData.get("serial.port");
+
+    //make sure the serial port or IP is defined
+    if (serialPort == null || serialPort.isEmpty()) {
+      System.err.println();
+      editor.statusError(typefs + " Error: serial port not defined!");
+      return;
+    }
+
+    //find port
+    if(serialPort.split("\\.").length == 4){
+      isNetwork = true;
+    } else {
+      String esptoolCmd = "esptool"+toolExtension;
+      esptool = new File(platform.getFolder()+"/tools", esptoolCmd);
+      if(!esptool.exists() || !esptool.isFile()){
+        esptool = new File(platform.getFolder()+"/tools/esptool_py", esptoolCmd);
+        if(!esptool.exists() || !esptool.isFile()){
+            esptool = new File(platform.getFolder()+"/tools/esptool", esptoolCmd);
+            if(!esptool.exists() || !esptool.isFile()){
+              esptool = new File(PreferencesData.get("runtime.tools.esptool_py.path"), esptoolCmd);
+              if(!esptool.exists() || !esptool.isFile()){
+                esptool = new File(PreferencesData.get("runtime.tools.esptool.path"), esptoolCmd);              
+                if(!esptool.exists() || !esptool.isFile()){
+                  System.err.println();
+                  editor.statusError("Error: esptool not found!");
+                  return;
+                }
+              }
+            }
+        }
+      }
+    }
+    System.out.println("esptool : "+esptool.getAbsolutePath());
+    System.out.println();	  
+
+    Object[] options = { "Yes", "No" };
+    String title = "Erase All Flash";
+    String message = "Are you sure?";
+
+    if(JOptionPane.showOptionDialog(editor, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]) != JOptionPane.YES_OPTION){
+      System.err.println();
+      editor.statusError("Warning: Erase All Flash canceled!");
+      return;
+    }
+
+    editor.statusNotice("Erasing all Flash started...");
+    System.out.println("Erasing all Flash started...");
+
+    if(isNetwork){
+      System.out.println("Cannot be done through OTA, IP     : "+serialPort);
+      System.out.println();
+    } else {
+      System.out.println("Port: "+serialPort);
       System.out.println();
       if(esptool.getAbsolutePath().endsWith(".py"))
-        sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", "esp32", "--baud", uploadSpeed, "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", flashMode, "--flash_freq", flashFreq, "--flash_size", "detect", ""+spiStart, imagePath});
+        sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", getChip(), "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
       else
-        sysExec(new String[]{esptool.getAbsolutePath(), "--chip", "esp32", "--baud", uploadSpeed, "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", flashMode, "--flash_freq", flashFreq, "--flash_size", "detect", ""+spiStart, imagePath});
+        sysExec(new String[]{esptool.getAbsolutePath(), "--chip", getChip(), "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
     }
   }
 
   public void run() {
-    createAndUpload();
+	String sketchName = editor.getSketch().getName();
+    Object[] options = { "LittleFS", "SPIFFS", "FatFS", "!Erase Flash!" };
+    typefs = (String)JOptionPane.showInputDialog(editor,
+                                              "Select FS for " + sketchName +
+                                              " /data folder",
+                                              "Filesystem",
+                                              JOptionPane.PLAIN_MESSAGE,
+                                              null,
+                                              options,
+                                              "LittleFS");
+    if ((typefs != null) && (typefs.length() > 0)) {
+        if (typefs == "!Erase Flash!") {
+            eraseFlash();
+        } else {
+            createAndUpload();
+        }        
+    } else {
+        System.out.println("Tool Exit.");
+       return; 
+    }
+  
   }
+
+  private String getChip() {
+    String targetBoardId = BaseNoGui.getTargetBoard().getId();
+
+    if (targetBoardId.contains("s2")) {
+      return "esp32s2";
+    }
+    else {
+      return "esp32";
+    }
+
+  }
+
 }
