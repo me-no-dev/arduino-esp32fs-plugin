@@ -170,7 +170,9 @@ public class ESP32FS implements Tool {
     
     if (typefs == "FatFS") spiOffset = 4096;
 
-    if(!PreferencesData.get("target_platform").contentEquals("esp32")){
+    System.out.println("Chip : " + getChip());
+
+    if(!PreferencesData.get("target_platform").contains("esp32")){
       System.err.println();
       editor.statusError(typefs + " Not Supported on "+PreferencesData.get("target_platform"));
       return;
@@ -399,8 +401,7 @@ public class ESP32FS implements Tool {
       System.out.println("[" + typefs + "] speed  : "+uploadSpeed);
       System.out.println("[" + typefs + "] mode   : "+flashMode);
       System.out.println("[" + typefs + "] freq   : "+flashFreq);
-      System.out.println(); 
-
+      System.out.println();
       if(esptool.getAbsolutePath().endsWith(".py"))
         sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", getChip(), "--baud", uploadSpeed, "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", flashMode, "--flash_freq", flashFreq, "--flash_size", "detect", ""+spiStart, imagePath});
       else
@@ -410,8 +411,8 @@ public class ESP32FS implements Tool {
 
   
   private void eraseFlash(){
-    
-    if(!PreferencesData.get("target_platform").contentEquals("esp32")){
+    System.out.println("Chip : " + getChip());
+    if(!PreferencesData.get("target_platform").contains("esp32")){
       System.err.println();
       editor.statusError(typefs + " Not Supported on "+PreferencesData.get("target_platform"));
       return;
@@ -491,10 +492,22 @@ public class ESP32FS implements Tool {
       System.out.println("Port: "+serialPort);
       System.out.println();
       if(esptool.getAbsolutePath().endsWith(".py"))
-        sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", "esp32", "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
+        sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", getChip(), "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
       else
-        sysExec(new String[]{esptool.getAbsolutePath(), "--chip", "esp32", "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
+        sysExec(new String[]{esptool.getAbsolutePath(), "--chip", getChip(), "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "erase_flash"});
     }
+  }
+
+  private String getChip() {
+    String targetBoardId = BaseNoGui.getTargetBoard().getId();
+
+    if (targetBoardId.contains("s2")) {
+      return "esp32s2";
+    }
+    else {
+      return "esp32";
+    }
+
   }
 
   public void run() {
@@ -520,17 +533,4 @@ public class ESP32FS implements Tool {
     }
   
   }
-
-  private String getChip() {
-    String targetBoardId = BaseNoGui.getTargetBoard().getId();
-
-    if (targetBoardId.contains("s2")) {
-      return "esp32s2";
-    }
-    else {
-      return "esp32";
-    }
-
-  }
-
 }
