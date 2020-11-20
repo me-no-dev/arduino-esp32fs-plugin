@@ -206,7 +206,7 @@ public class ESP32FS implements Tool {
     String espotaCmd = "espota.py";
     if(PreferencesData.get("runtime.os").contentEquals("windows"))
         espotaCmd = "espota.exe";
-    
+
     Boolean isNetwork = false;
     File espota = new File(platform.getFolder()+"/tools");
     File esptool = new File(platform.getFolder()+"/tools");
@@ -217,23 +217,32 @@ public class ESP32FS implements Tool {
       editor.statusError("Partitions Not Defined for "+BaseNoGui.getBoardPreferences().get("name"));
       return;
     }
-    
-    try {
-      partitions = BaseNoGui.getBoardPreferences().get("build.partitions");
-      if(partitions == null || partitions.contentEquals("")){
-        editor.statusError("Partitions Not Found for "+BaseNoGui.getBoardPreferences().get("name"));
-        return;
-      }
-    } catch(Exception e){
-      editor.statusError(e);
-      return;
-    }
 
-    File partitionsFile = new File(platform.getFolder() + "/tools/partitions", partitions + ".csv");
-    if (!partitionsFile.exists() || !partitionsFile.isFile()) {
-      System.err.println();
-      editor.statusError(typefs + " Error: partitions file " + partitions + ".csv not found!");
-      return;
+    File partitionsFile = new File(editor.getSketch().getFolder(), "partitions.csv");
+
+    if (partitionsFile.exists() && partitionsFile.isFile()) {
+        System.out.println("Using partitions.csv from sketch folder.");
+
+    } else {
+        System.out.println("Using partition scheme from Arduino IDE.");
+        try {
+          partitions = BaseNoGui.getBoardPreferences().get("build.partitions");
+          if(partitions == null || partitions.contentEquals("")){
+            editor.statusError("Partitions Not Found for "+BaseNoGui.getBoardPreferences().get("name"));
+            return;
+          }
+        } catch(Exception e){
+          editor.statusError(e);
+          return;
+        }
+
+        partitionsFile = new File(platform.getFolder() + "/tools/partitions", partitions + ".csv");
+
+        if (!partitionsFile.exists() || !partitionsFile.isFile()) {
+          System.err.println();
+          editor.statusError(typefs + " Error: partitions file " + partitions + ".csv not found!");
+          return;
+        }
     }
 
     try {
