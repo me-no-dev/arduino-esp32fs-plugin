@@ -248,18 +248,42 @@ public class ESP32FS implements Tool {
     try {
       BufferedReader partitionsReader = new BufferedReader(new FileReader(partitionsFile));
       String partitionsLine = "";
+      long spiPrevEnd = 0;
+      boolean isDataLine = false;
       while ((partitionsLine = partitionsReader.readLine()) != null) {
-        if( ((typefs != "FatFS") && partitionsLine.contains("spiffs")) || ((typefs == "FatFS") && partitionsLine.contains("ffat"))){ 
-          partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
-          partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
-          partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
-          while(partitionsLine.startsWith(" ")) partitionsLine = partitionsLine.substring(1);
-          String pStart = partitionsLine.substring(0, partitionsLine.indexOf(","));
-          partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
-          while(partitionsLine.startsWith(" ")) partitionsLine = partitionsLine.substring(1);
-          String pSize = partitionsLine.substring(0, partitionsLine.indexOf(","));
-          spiStart = parseInt(pStart) + spiOffset;
-          spiSize = parseInt(pSize) - spiOffset;
+          if (!partitionsLine.substring(0, 1).equals("#")) {
+            if( ((typefs != "FatFS") && partitionsLine.contains("spiffs")) || ((typefs == "FatFS") && partitionsLine.contains("ffat"))){
+                isDataLine = true;
+            }
+            partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
+            partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
+            partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
+            while(partitionsLine.startsWith(" ")) partitionsLine = partitionsLine.substring(1);
+            String pStart = partitionsLine.substring(0, partitionsLine.indexOf(","));
+            partitionsLine = partitionsLine.substring(partitionsLine.indexOf(",")+1);
+            while(partitionsLine.startsWith(" ")) partitionsLine = partitionsLine.substring(1);
+            String pSize = partitionsLine.substring(0, partitionsLine.indexOf(","));
+
+            //System.out.println("From CSV, Partition Start: " + pStart + ", Size: " + pSize);
+
+            if (isDataLine) {
+                if (pStart == null || pStart.trim().isEmpty()) {
+                    spiStart = spiPrevEnd + spiOffset;
+                } else {
+                    spiStart = parseInt(pStart) + spiOffset;
+                }
+                spiSize = parseInt(pSize) - spiOffset;
+                break;
+            } else {
+                if (pSize != null && !pSize.trim().isEmpty()) {
+                    if (pStart == null || pStart.trim().isEmpty()) {
+                        spiPrevEnd += parseInt(pSize);
+                    } else {
+                        spiPrevEnd = parseInt(pStart) + parseInt(pSize);
+                    }
+                }
+                spiSize = 0;
+            }
         }
       }
       if(spiSize == 0){
@@ -271,6 +295,9 @@ public class ESP32FS implements Tool {
       editor.statusError(e);
       return;
     }
+
+    System.out.println("Start: 0x" + String.format("%x", spiStart));
+    System.out.println("Size : 0x" + String.format("%x", spiSize));
 
     File tool = new File(platform.getFolder() + "/tools", mkspiffsCmd);
     if (!tool.exists() || !tool.isFile()) {
