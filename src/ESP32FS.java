@@ -154,10 +154,9 @@ public class ESP32FS implements Tool {
   }
 
   private long parseInt(String value){
-    if(value.endsWith("m") || value.endsWith("M")) return 1024*1024*Long.parseLong(value.substring(0, (value.length() - 1)));
-    else if(value.endsWith("k") || value.endsWith("K")) return 1024*Long.parseLong(value.substring(0, (value.length() - 1)));
-    else if(value.startsWith("0x") || value.startsWith("0X")) return Long.parseLong(value.substring(2), 16);
-    else return Integer.parseInt(value);
+    if(value.endsWith("m") || value.endsWith("M")) return 1024*1024*Long.decode(value.substring(0, (value.length() - 1)));
+    else if(value.endsWith("k") || value.endsWith("K")) return 1024*Long.decode(value.substring(0, (value.length() - 1)));
+    else return Long.decode(value);
   }
 
   private long getIntPref(String name){
