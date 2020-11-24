@@ -439,6 +439,7 @@ public class ESP32FS implements Tool {
       System.out.println("[" + typefs + "] mode   : "+flashMode);
       System.out.println("[" + typefs + "] freq   : "+flashFreq);
       System.out.println();
+      // change after "write_flash" "-z" to "-u" (--no_compress) below to build file for esp32fs_no_compress.zip
       if(esptool.getAbsolutePath().endsWith(".py"))
         sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", getChip(), "--baud", uploadSpeed, "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", flashMode, "--flash_freq", flashFreq, "--flash_size", "detect", ""+spiStart, imagePath});
       else
