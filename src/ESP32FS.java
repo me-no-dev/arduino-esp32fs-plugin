@@ -43,6 +43,7 @@ import processing.app.Platform;
 import processing.app.Sketch;
 import processing.app.tools.Tool;
 import processing.app.helpers.ProcessUtils;
+import processing.app.helpers.PreferencesMap;
 import processing.app.debug.TargetPlatform;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -162,6 +163,12 @@ public class ESP32FS implements Tool {
     return parseInt(data);
   }
 
+  private String getChip(){
+    PreferencesMap prefs = BaseNoGui.getTargetBoard().getPreferences();
+    String mcu = prefs.get("build.mcu", "esp32");
+    return mcu;
+  }
+  
   private void createAndUpload(){
     long spiStart = 0, spiSize = 0, spiPage = 256, spiBlock = 4096;
     String partitions = "";
@@ -368,9 +375,9 @@ public class ESP32FS implements Tool {
       System.out.println("[SPIFFS] freq   : "+flashFreq);
       System.out.println();
       if(esptool.getAbsolutePath().endsWith(".py"))
-        sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", "esp32", "--baud", uploadSpeed, "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", flashMode, "--flash_freq", flashFreq, "--flash_size", "detect", ""+spiStart, imagePath});
+        sysExec(new String[]{pythonCmd, esptool.getAbsolutePath(), "--chip", getChip(), "--baud", uploadSpeed, "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", flashMode, "--flash_freq", flashFreq, "--flash_size", "detect", ""+spiStart, imagePath});
       else
-        sysExec(new String[]{esptool.getAbsolutePath(), "--chip", "esp32", "--baud", uploadSpeed, "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", flashMode, "--flash_freq", flashFreq, "--flash_size", "detect", ""+spiStart, imagePath});
+        sysExec(new String[]{esptool.getAbsolutePath(), "--chip", getChip(), "--baud", uploadSpeed, "--port", serialPort, "--before", "default_reset", "--after", "hard_reset", "write_flash", "-z", "--flash_mode", flashMode, "--flash_freq", flashFreq, "--flash_size", "detect", ""+spiStart, imagePath});
     }
   }
 
