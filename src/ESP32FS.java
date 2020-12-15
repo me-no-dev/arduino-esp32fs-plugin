@@ -43,6 +43,7 @@ import processing.app.Platform;
 import processing.app.Sketch;
 import processing.app.tools.Tool;
 import processing.app.helpers.ProcessUtils;
+import processing.app.helpers.PreferencesMap;
 import processing.app.debug.TargetPlatform;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -536,16 +537,10 @@ public class ESP32FS implements Tool {
     }
   }
 
-  private String getChip() {
-    String targetBoardId = BaseNoGui.getTargetBoard().getId();
-
-    if (targetBoardId.contains("s2")) {
-      return "esp32s2";
-    }
-    else {
-      return "esp32";
-    }
-
+  private String getChip(){
+    PreferencesMap prefs = BaseNoGui.getTargetBoard().getPreferences();
+    String mcu = prefs.get("build.mcu", "esp32");
+    return mcu;
   }
 
   public void run() {
