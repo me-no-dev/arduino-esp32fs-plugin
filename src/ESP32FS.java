@@ -23,14 +23,10 @@
 
 package com.esp32.mkspiffs;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.IOException;
+import java.util.*;
+import java.io.*;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import javax.swing.JOptionPane;
@@ -52,6 +48,32 @@ import processing.app.helpers.FileUtils;
 import cc.arduino.files.DeleteFilesOnShutdown;
 
 /**
+ * Taken from https://www.infoworld.com/article/2071275/when-runtime-exec---won-t.html?page=3
+ */
+class StreamGobbler extends Thread {
+    InputStream is;
+    String type;
+
+    StreamGobbler(InputStream is, String type) {
+        this.is = is;
+        this.type = type;
+    }
+
+    public void run() {
+      try {
+            InputStreamReader isr = new InputStreamReader(is);
+            BufferedReader br = new BufferedReader(isr);
+            String line=null;
+            while ( (line = br.readLine()) != null)
+                System.out.println(type + ">" + line);
+      } catch (IOException ioe) {
+            ioe.printStackTrace();
+      }
+    }
+}
+
+
+/**
  * Example Tools menu entry.
  */
 public class ESP32FS implements Tool {
@@ -71,31 +93,26 @@ public class ESP32FS implements Tool {
 
   private int listenOnProcess(String[] arguments){
       try {
-        final Process p = ProcessUtils.exec(arguments);
-        Thread thread = new Thread() {
-          public void run() {
-            try {
-              InputStreamReader reader = new InputStreamReader(p.getInputStream());
-              int c;
-              while ((c = reader.read()) != -1)
-                  System.out.print((char) c);
-              reader.close();
-              
-              reader = new InputStreamReader(p.getErrorStream());
-              while ((c = reader.read()) != -1)
-                  System.err.print((char) c);
-              reader.close();
-            } catch (Exception e){}
-          }
-        };
-        thread.start();
-        int res = p.waitFor();
-        thread.join();
-        return res;
+            Runtime rt = Runtime.getRuntime();
+            Process proc = rt.exec(arguments);
+            // any error message?
+            StreamGobbler errorGobbler = new StreamGobbler(proc.getErrorStream(), "E");
+
+            // any output?
+            StreamGobbler outputGobbler = new StreamGobbler(proc.getInputStream(), "O");
+
+            // kick them off
+            errorGobbler.start();
+            outputGobbler.start();
+
+            // any error???
+            int exitVal = proc.waitFor();
+
+        return exitVal;
       } catch (Exception e){
         return -1;
       }
-    }
+  }
 
   private void sysExec(final String[] arguments){
     Thread thread = new Thread() {
@@ -328,9 +345,12 @@ public class ESP32FS implements Tool {
       isNetwork = true;
       espota = new File(platform.getFolder()+"/tools", espotaCmd);
       if(!espota.exists() || !espota.isFile()){
-        System.err.println();
-        editor.statusError(typefs + " Error: espota not found!");
-        return;
+		espota = new File(platform.getFolder()+"/tools", "espota.py");   //fall-back to .py
+		if(!espota.exists() || !espota.isFile()){
+			System.err.println();
+			editor.statusError(typefs + " Error: espota not found!");
+			return;
+		}
       }
 	  System.out.println("espota : "+espota.getAbsolutePath());
       System.out.println();	 
@@ -354,11 +374,10 @@ public class ESP32FS implements Tool {
             }
         }
       }
+      System.out.println("esptool : "+esptool.getAbsolutePath());
+      System.out.println();
     }
-    System.out.println("esptool : "+esptool.getAbsolutePath());
-    System.out.println();	  
-   
-	
+
     //load a list of all files
     int fileCount = 0;
     File dataFolder = new File(editor.getSketch().getFolder(), "data");
@@ -426,9 +445,10 @@ public class ESP32FS implements Tool {
 
     if(isNetwork){
       System.out.println("[" + typefs + "] IP     : "+serialPort);
-      System.out.println();
+	  System.out.println("Running: " + espota.getAbsolutePath() + " -i " + serialPort + " -p 3232 -s -f " + imagePath);
+	  System.out.println();
       if(espota.getAbsolutePath().endsWith(".py"))
-        sysExec(new String[]{pythonCmd, espota.getAbsolutePath(), "-i", serialPort, "-p", "3232", "-s", "-f", imagePath});
+        sysExec(new String[]{pythonCmd, espota.getAbsolutePath(), "-i", serialPort, "-p", "3232", "-s", "-f", imagePath}); // other flags , "-d", "-r", "-t", "50" 
       else
         sysExec(new String[]{espota.getAbsolutePath(), "-i", serialPort, "-p", "3232", "-s", "-f", imagePath});
     } else {
@@ -507,9 +527,9 @@ public class ESP32FS implements Tool {
             }
         }
       }
+	  System.out.println("esptool : "+esptool.getAbsolutePath());
+      System.out.println();
     }
-    System.out.println("esptool : "+esptool.getAbsolutePath());
-    System.out.println();	  
 
     Object[] options = { "Yes", "No" };
     String title = "Erase All Flash";
