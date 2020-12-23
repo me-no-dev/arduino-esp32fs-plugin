@@ -69,7 +69,7 @@ if (!FFat.begin(0, "", 1)) die("Fat FS mount failed. Not enough RAM?");
 - Find where files **arduino-core.jar , commons-codec-1.7.jar , pde.jar**  of your Arduino IDE installation are located
 - Edit **make_win.bat** to match "your" paths for **set PATH=your\java\bin;%PATH%** and **set ALP=your\arduino\lib** 
 - Run **make_win.bat**
-- Find the **jar** file in /bin directory 
+- Find the **jar** file in src/bin directory 
 
 ## Credits and license
 
