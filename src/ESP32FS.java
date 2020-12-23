@@ -96,10 +96,10 @@ public class ESP32FS implements Tool {
             Runtime rt = Runtime.getRuntime();
             Process proc = rt.exec(arguments);
             // any error message?
-            StreamGobbler errorGobbler = new StreamGobbler(proc.getErrorStream(), "E");
+            StreamGobbler errorGobbler = new StreamGobbler(proc.getErrorStream(), "_");
 
             // any output?
-            StreamGobbler outputGobbler = new StreamGobbler(proc.getInputStream(), "O");
+            StreamGobbler outputGobbler = new StreamGobbler(proc.getInputStream(), "-");
 
             // kick them off
             errorGobbler.start();
