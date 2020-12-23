@@ -2,7 +2,7 @@
 
 - Arduino plugin which packs sketch data folder into SPIFFS, LittleFS or FatFS filesystem image,
 and uploads the image to ESP32 flash memory.
-- Added custom "partition.csv" file processing if it is located in the sketch folder.
+- Added custom **"partition.csv"** file processing if it is located in the sketch folder.
 - Added esp32 / esp32s2 chip detection based on Arduino IDE selection.
 - Added a choice to "Erase all flash".
 - You can have only one of three filesystems on same Arduino project as data partition.
@@ -11,7 +11,6 @@ and uploads the image to ESP32 flash memory.
 
 - This is the default filesystem implemented in esp-32 core for /data folder
 - Go to Arduino IDE menu: ***Tools > Partition Scheme*** and select an entry with SPIFFS partition
-
 
 ## Notes for LittleFS
 
@@ -67,8 +66,8 @@ if (!FFat.begin(0, "", 1)) die("Fat FS mount failed. Not enough RAM?");
 
 - Install Java JDK 
 - Find the path of javac.exe and jar.exe
-- Edit **make_win.bat** accordingly
-- Copy files **arduino-core.jar , commons-codec-1.7.jar , pde.jar**  from your Arduino IDE installation to the folder where is located **make_win.bat**
+- Find where files **arduino-core.jar , commons-codec-1.7.jar , pde.jar**  of your Arduino IDE installation are located
+- Edit **make_win.bat** to match "your" paths for **set PATH=your\java\bin;%PATH%** and **set ALP=your\arduino\lib** 
 - Run **make_win.bat**
 - Find the **jar** file in /bin directory 
 
