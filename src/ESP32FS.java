@@ -219,7 +219,12 @@ public class ESP32FS implements Tool {
       return;
     }
 
-    File partitionsFile = new File(platform.getFolder() + "/tools/partitions", partitions + ".csv");
+    // A custom partitions.csv in the sketch folder overrides the board preferences
+    // This is hard coded in https://github.com/espressif/arduino-esp32/blob/master/platform.txt
+    File partitionsFile = new File(editor.getSketch().getFolder(), "partitions.csv");
+    if (!partitionsFile.exists() || !partitionsFile.isFile()) {
+        partitionsFile = new File(platform.getFolder() + "/tools/partitions", partitions + ".csv");
+    }
     if (!partitionsFile.exists() || !partitionsFile.isFile()) {
       System.err.println();
       editor.statusError("SPIFFS Error: partitions file " + partitions + ".csv not found!");
