@@ -3,11 +3,15 @@
 if [[ -z "$INSTALLDIR" ]]; then
     INSTALLDIR="$HOME/Documents/Arduino"
 fi
+if [[ -z "$IDEDIR" ]]; then
+    IDEDIR="/Applications/Arduino.app/Contents/Java/"
+    #IDEDIR="../../../"
+fi
 echo "INSTALLDIR: $INSTALLDIR"
 
-pde_path=`find ../../../ -name pde.jar`
-core_path=`find ../../../ -name arduino-core.jar`
-lib_path=`find ../../../ -name commons-codec-1.7.jar`
+pde_path=`find $IDEDIR -name pde.jar`
+core_path=`find $IDEDIR -name arduino-core.jar`
+lib_path=`find $IDEDIR -name commons-codec-1.7.jar`
 if [[ -z "$core_path" || -z "$pde_path" ]]; then
     echo "Some java libraries have not been built yet (did you run ant build?)"
     return 1
@@ -19,7 +23,7 @@ echo "lib_path: $lib_path"
 set -e
 
 mkdir -p bin
-javac -target 1.8 -cp "$pde_path:$core_path:$lib_path" \
+/Library/Java/JavaVirtualMachines/openlogic-openjdk-8.jdk/Contents/Home/bin/javac -target 1.8 -cp "$pde_path:$core_path:$lib_path" \
       -d bin src/ESP32FS.java
 
 pushd bin
